@@ -1,0 +1,539 @@
+<!doctype html>
+<!-- The Worst Game Ever, by Isa. Code MIT, art/name/text CC BY-NC-SA 4.0 (see ASSETS-LICENSE.md). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>The Worst Game Ever 🎃</title>
+<meta name="description" content="Isa's entry to the AI Game Makers Club Worst Game Ever Challenge, Halloween edition. Get the candy. Badly.">
+<meta property="og:title" content="🎃 The Worst Game Ever 👻">
+<meta property="og:description" content="Get the candy. Badly. Isa's entry to the AI Game Makers Club Worst Game Ever Challenge (Halloween edition).">
+<meta property="og:image" content="https://isabellagreco1997.github.io/worst-game-ever/assets/challenge-banner.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎃</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #0c0c0e; --cream: #faf3e6; --red: #ff5a47; --sick: #ff8a1f; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--ink); color: var(--cream); font-family: "VT323", monospace; overflow: hidden; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+  #wrap { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+  #stage { position: relative; width: min(100vw, calc(100vh * 16 / 9)); aspect-ratio: 16 / 9; }
+  canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; background: #2a1840; }
+  .panel { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 4%; background: var(--ink); }
+  .panel.on { display: flex; }
+  h1 { font-size: clamp(32px, 9vw, 110px); line-height: .85; margin: 0 0 .2em; color: var(--red); text-shadow: 4px 4px 0 var(--cream); transform: rotate(-3deg); }
+  h1 s { color: var(--cream); text-shadow: none; opacity: .6; }
+  .sub { font-size: clamp(16px, 2.6vw, 30px); opacity: .85; margin: .2em 0; }
+  .blink { animation: blink 1s steps(2) infinite; font-size: clamp(20px, 3.4vw, 40px); margin-top: 1em; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .bar { width: 60%; height: 28px; border: 4px solid var(--cream); margin: 1em 0 .4em; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--sick); }
+  .box { background: var(--cream); color: var(--ink); padding: 1.2em 1.6em; border: 6px solid var(--red); max-width: 560px; font-size: clamp(18px, 2.4vw, 28px); transform: rotate(1deg); }
+  button { font-family: inherit; font-size: clamp(18px, 2.4vw, 28px); background: var(--red); color: var(--cream); border: 4px solid var(--ink); padding: .2em .9em; margin: .4em .3em 0; cursor: pointer; position: relative; transition: left .12s, top .12s; }
+  button.alt { background: var(--sick); color: var(--ink); }
+  #end .logo { width: min(340px, 50%); margin-top: .8em; }
+  #end .big { font-size: clamp(18px, 2.6vw, 32px); }
+  #end b { color: var(--red); }
+  #pad { position: absolute; bottom: 8px; left: 0; right: 0; display: none; justify-content: space-between; padding: 0 10px; pointer-events: none; }
+  #pad div { display: flex; gap: 10px; }
+  #pad span { pointer-events: auto; width: 62px; height: 62px; border: 3px solid var(--cream); border-radius: 50%; background: rgba(12,12,14,.45); display: flex; align-items: center; justify-content: center; font-size: 32px; }
+  #pad span.on { background: var(--red); }
+  #mute { position: absolute; top: 6px; right: 8px; font-size: 22px; opacity: .7; cursor: pointer; z-index: 5; }
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage">
+  <canvas id="c" width="640" height="360"></canvas>
+
+  <div class="panel on" id="title">
+    <h1>THE WORST<br>GAME <s>EVR</s> EVER</h1>
+    <div class="sub">🎃 halloween edition (spooky, technically) 👻</div>
+    <div class="sub">by Isa · made in one afternoon (it shows)</div>
+    <div class="blink" id="pressKey">press any key</div>
+  </div>
+
+  <div class="panel" id="loading">
+    <div class="sub">summoning the worst game ever... 🕯️</div>
+    <div class="bar"><i id="barFill"></i></div>
+    <div class="sub" id="barText">0%</div>
+  </div>
+
+  <div class="panel" id="cookies">
+    <div class="box">
+      🍪 This game uses cookies (and candy corn) to make your experience worse.<br>
+      <button id="ck1">Accept</button><button id="ck2" class="alt">Accept (sadly)</button>
+    </div>
+  </div>
+
+  <div class="panel" id="end">
+    <h1 style="font-size:clamp(30px,7vw,84px)">YOU WON?</h1>
+    <div class="big" id="stats"></div>
+    <div class="sub" style="margin-top:.6em">this was my entry to the <b>🎃 WORST GAME EVER CHALLENGE 💀</b></div>
+    <div class="sub">your turn: make the worst game you can with AI and post it in the club.</div>
+    <img class="logo" src="assets/agmc-logo.png" alt="AI Game Makers Club">
+    <div><button id="again">Play again</button><button id="rate" class="alt">Rate ⭐ out of 1</button></div>
+  </div>
+
+  <div id="mute" title="mute (M)">🔊</div>
+  <div id="pad">
+    <div><span data-k="ArrowLeft">←</span><span data-k="ArrowRight">→</span></div>
+    <div><span data-k="ArrowDown">↓</span><span data-k="ArrowUp">↑</span></div>
+  </div>
+</div></div>
+
+<script>
+const cv = document.getElementById('c');
+const g = cv.getContext('2d');
+const W = 640, H = 360, GROUND = 300;
+const $ = id => document.getElementById(id);
+const touch = matchMedia('(pointer: coarse)').matches;
+
+let audio = null, muted = false, musicTimer = null, musicFast = false;
+function ac() {
+  if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+  if (audio.state === 'suspended') audio.resume();
+  return audio;
+}
+function beep(f1, f2, dur, type = 'square', vol = 0.06) {
+  if (muted) return;
+  const a = ac(), o = a.createOscillator(), v = a.createGain(), t = a.currentTime;
+  o.type = type;
+  o.frequency.setValueAtTime(f1, t);
+  o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  v.gain.setValueAtTime(vol, t);
+  v.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(v).connect(a.destination);
+  o.start(t); o.stop(t + dur);
+}
+const sfx = {
+  jump: () => beep(260 + Math.random() * 400, 900, 0.18),
+  die: () => beep(400, 60, 0.9, 'sawtooth', 0.07),
+  nope: () => beep(700, 200, 0.25, 'triangle', 0.09),
+  click: () => beep(500, 480, 0.05),
+  boo: () => beep(180, 90, 0.6, 'triangle', 0.12),
+  win: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, f, 0.2, 'square', 0.06), i * 140)),
+};
+const TUNE = [220, 262, 311, 370, 311, 262, 220, 208];
+function startMusic() {
+  stopMusic();
+  let i = 0;
+  const step = () => {
+    const f = TUNE[i % TUNE.length] * (i % 16 === 13 ? 1.06 : 1);
+    beep(f, f * 0.98, 0.22, 'triangle', 0.05);
+    i++;
+    musicTimer = setTimeout(step, musicFast ? 130 : 300);
+  };
+  step();
+}
+function stopMusic() { clearTimeout(musicTimer); musicTimer = null; }
+function toggleMute() {
+  muted = !muted;
+  $('mute').textContent = muted ? '🔇' : '🔊';
+  if (muted) stopMusic(); else if (state === 'play') startMusic();
+}
+$('mute').addEventListener('click', e => { e.stopPropagation(); toggleMute(); });
+
+let state = 'title', titleTries = 0;
+function show(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === id));
+}
+function anyStart() {
+  if (state !== 'title') return;
+  ac();
+  sfx.click();
+  if (titleTries++ === 0) {
+    $('pressKey').textContent = touch ? 'not there. 👻' : 'not that one. 👻';
+    return;
+  }
+  state = 'loading';
+  show('loading');
+  runLoading();
+}
+function runLoading() {
+  const steps = [[0, 0], [400, 37], [800, 81], [1100, 99], [2300, 99], [2400, 12], [3000, 13], [3200, 100]];
+  const notes = { 99: '99%', 12: '12% (a ghost unplugged it)', 13: '13% 🕷️', 100: '100% (fine)' };
+  steps.forEach(([t, p]) => setTimeout(() => {
+    $('barFill').style.width = p + '%';
+    $('barText').textContent = notes[p] || p + '%';
+    if (p === 12) sfx.boo();
+  }, t));
+  setTimeout(() => { state = 'cookies'; show('cookies'); }, 3900);
+}
+function acceptCookies() { sfx.click(); show(null); startGame(); }
+$('ck1').onclick = acceptCookies;
+$('ck2').onclick = acceptCookies;
+$('title').addEventListener('pointerdown', anyStart);
+
+const keys = {};
+const NAMES = { ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓' };
+const ALIAS = { a: 'ArrowLeft', d: 'ArrowRight', w: 'ArrowUp', s: 'ArrowDown', A: 'ArrowLeft', D: 'ArrowRight', W: 'ArrowUp', S: 'ArrowDown' };
+addEventListener('keydown', e => {
+  if (e.key === 'm' || e.key === 'M') { toggleMute(); return; }
+  if (state === 'title') { anyStart(); return; }
+  if (state === 'cookies' && (e.key === 'Enter' || e.key === ' ')) { acceptCookies(); return; }
+  const k = ALIAS[e.key] || e.key;
+  if (NAMES[k]) { e.preventDefault(); if (!keys[k]) pressed(k); keys[k] = true; }
+  if (e.key === ' ' && state === 'play') { e.preventDefault(); toast('space is for astronauts. you are a ghost.', 1.8); }
+});
+addEventListener('keyup', e => { keys[ALIAS[e.key] || e.key] = false; });
+if (touch) {
+  $('pad').style.display = 'flex';
+  document.querySelectorAll('#pad span').forEach(b => {
+    const k = b.dataset.k;
+    b.addEventListener('pointerdown', e => { e.preventDefault(); if (!keys[k]) pressed(k); keys[k] = true; b.classList.add('on'); });
+    const up = () => { keys[k] = false; b.classList.remove('on'); };
+    b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up);
+  });
+}
+
+const PATCHES = [
+  { ArrowLeft: 'right', ArrowRight: 'left', ArrowDown: 'jump', ArrowUp: 'boo', g: 0.5, label: 'v0.0.1' },
+  { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'jump', ArrowDown: 'apologise', g: 0.5, label: 'v1.0.1 (controls fixed!!)' },
+  { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'jump', ArrowDown: 'boo', g: 0.16, label: 'v1.0.2 (gravity.exe was haunted)' },
+];
+const SOLIDS = [
+  { x: 0, y: GROUND, w: 250, h: 60, label: 'grave dirt' },
+  { x: 370, y: GROUND, w: 270, h: 60, label: 'also grave dirt' },
+  { x: 288, y: 262, w: 44, h: 10, label: 'coffin lid' },
+];
+const DECOR = [
+  { x: 120, kind: 'grave', label: 'RIP my sleep' },
+  { x: 200, kind: 'pumpkin', label: 'pumpkin' },
+  { x: 420, kind: 'pumpkin', label: 'tomato' },
+  { x: 500, kind: 'grave', label: 'RIP bug fixes' },
+];
+
+let p, flag, boss, patch, score, deaths, escapes, toasts, freeze, shake, t, frozenText, ad, ended, epoch = 0;
+function startGame() {
+  state = 'play';
+  epoch++;
+  p = { x: 40, y: GROUND - 28, w: 24, h: 28, vx: 0, vy: 0, ground: false, face: 1, safe: 40 };
+  flag = { x: 596, tx: 596, run: 0, tired: false };
+  boss = null;
+  patch = PATCHES[0];
+  score = 1000; deaths = 0; escapes = 0; toasts = []; freeze = 0; shake = 0; t = 0; frozenText = ''; ended = false;
+  ad = { on: true, x: 390, y: 14, w: 230, h: 56, closed: 0 };
+  musicFast = false;
+  startMusic();
+  toast('get the candy 🍬 use the arrow keys. you\'ll figure it out.', 4);
+}
+function toast(text, secs = 2.4) { toasts.push({ text, life: secs * 60 }); }
+function later(ms, fn) { const e = epoch; setTimeout(() => { if (e === epoch && state === 'play') fn(); }, ms); }
+
+function pressed(k) {
+  if (state !== 'play' || freeze > 0) return;
+  const act = patch[k];
+  if (act === 'jump' && p.ground) {
+    p.vy = patch.g < 0.3 ? -7 : -10.5;
+    p.ground = false;
+    score -= 10;
+    sfx.jump();
+  } else if (act === 'boo') { sfx.boo(); toast('boo. nobody was scared.', 1.4); }
+  else if (act === 'apologise') toast('sorry.', 1.2);
+}
+
+function hit(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+
+function update() {
+  t++;
+  toasts.forEach(o => o.life--);
+  toasts = toasts.filter(o => o.life > 0);
+  if (shake > 0) shake--;
+  if (freeze > 0) { freeze--; return; }
+
+  let dir = 0;
+  for (const k in NAMES) if (keys[k]) {
+    if (patch[k] === 'left') dir -= 1;
+    if (patch[k] === 'right') dir += 1;
+  }
+  p.vx = dir * 3.4;
+  if (dir) p.face = dir;
+  p.vy = Math.min(p.vy + patch.g, 12);
+
+  p.x += p.vx;
+  for (const s of SOLIDS) if (hit(p, s)) p.x = p.vx > 0 ? s.x - p.w : s.x + s.w;
+  p.x = Math.max(0, Math.min(W - p.w, p.x));
+
+  p.y += p.vy;
+  p.ground = false;
+  for (const s of SOLIDS) if (hit(p, s)) {
+    if (p.vy > 0) { p.y = s.y - p.h; p.ground = true; if (s.h > 20) p.safe = Math.max(s.x + 10, Math.min(s.x + s.w - 34, p.x)); }
+    else p.y = s.y + s.h;
+    p.vy = 0;
+  }
+
+  if (p.y > H + 40) die();
+
+  if (flag.run) {
+    flag.x += Math.sign(flag.tx - flag.x) * 7;
+    if (Math.abs(flag.tx - flag.x) < 7) { flag.x = flag.tx; flag.run = 0; }
+  } else if (!flag.tired && !boss && Math.abs((p.x + 12) - (flag.x + 12)) < 70) {
+    escapes++;
+    flag.run = 1;
+    flag.tx = flag.x > W / 2 ? 30 : 596;
+    sfx.nope();
+    toast(escapes === 1 ? 'the candy said NOPE.' : 'NOPE x2', 2.2);
+    shake = 10;
+    later(1500, () => applyPatch(escapes));
+  } else if (flag.tired && !boss && hit(p, { x: flag.x - 4, y: GROUND - 40, w: 34, h: 40 })) {
+    spawnBoss();
+  }
+
+  if (boss && !boss.dead) {
+    boss.x += Math.sign(p.x - boss.x) * 0.5;
+    boss.life--;
+    if (hit(p, boss) || boss.life <= 0) {
+      boss.dead = true;
+      sfx.win();
+      toast(boss.life > 0 ? 'boss defeated. it was its first day.' : 'the boss tripped on its cape. you win anyway.', 3);
+      score += 1;
+      later(2600, endGame);
+    }
+  }
+}
+
+function applyPatch(n) {
+  patch = PATCHES[Math.min(n, 2)];
+  freeze = 50;
+  frozenText = 'LAG (it\'s haunted)';
+  shake = 12;
+  toast('🛠️ CONTROLS UPDATED → ' + patch.label, 3.4);
+  if (n >= 2) {
+    flag.tired = true;
+    later(1800, () => toast('the candy is tired. it sits down. go.', 3));
+  }
+}
+
+function die() {
+  deaths++;
+  score += 50;
+  sfx.die();
+  freeze = 70;
+  frozenText = 'YOU DIED (you were already a ghost??)';
+  shake = 16;
+  p.x = p.safe;
+  p.y = GROUND - 28;
+  p.vx = 0; p.vy = 0;
+  toast('+50 points for dying. that\'s how it works here.', 2.6);
+}
+
+function spawnBoss() {
+  boss = { x: 430, y: GROUND - 16, w: 16, h: 16, dead: false, life: 60 * 9 };
+  if (p.x < 470) boss.x = 610;
+  musicFast = true;
+  if (!muted) startMusic();
+  shake = 30;
+  toast('⚠️ THE FINAL BOSS APPROACHES ⚠️', 3);
+}
+
+function endGame() {
+  if (ended) return;
+  ended = true;
+  state = 'end';
+  stopMusic();
+  const rank = deaths === 0 ? 'suspiciously good' : deaths < 3 ? 'perfectly mid' : deaths < 7 ? 'chaotic neutral' : 'legend of the pit';
+  $('stats').innerHTML = 'score: <b>' + score + '</b> · deaths: <b>' + deaths + '</b> · rank: <b>' + rank + '</b> · candy: <b>1</b> 🍬';
+  show('end');
+  dodges = 0;
+}
+
+let dodges = 0;
+const again = $('again');
+function dodge(e) {
+  if (dodges >= 3) return;
+  dodges++;
+  e.preventDefault();
+  e.stopPropagation();
+  again.style.left = (Math.random() * 240 - 120) + 'px';
+  again.style.top = (Math.random() * 60 - 30) + 'px';
+  again.textContent = ['nope', 'too slow', 'ok ok, click me'][dodges - 1];
+  sfx.nope();
+}
+again.addEventListener('pointerenter', e => { if (!touch) dodge(e); });
+again.addEventListener('click', e => {
+  if (dodges < 3) { dodge(e); return; }
+  again.style.left = again.style.top = '0px';
+  again.textContent = 'Play again';
+  show(null);
+  startGame();
+});
+$('rate').onclick = () => { $('rate').textContent = '⭐ thank you. that\'s the max.'; sfx.win(); };
+
+cv.addEventListener('pointerdown', e => {
+  if (state !== 'play' || !ad.on) return;
+  const r = cv.getBoundingClientRect();
+  const x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height;
+  if (x > ad.x + ad.w - 26 && x < ad.x + ad.w && y > ad.y && y < ad.y + 22) {
+    sfx.click();
+    ad.on = false;
+    if (ad.closed === 0) {
+      ad.closed = 1;
+      later(3000, () => { ad.on = true; ad.closed = 2; ad.w = 300; ad.h = 80; ad.x = 170; ad.y = 90; toast('the ad came back from the dead. bigger.', 2.4); });
+    } else toast('ad closed. for real this time. probably.', 2);
+  }
+});
+
+function block(x, y, w, h, c) { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); }
+function txt(s, x, y, size = 18, c = '#faf3e6', align = 'left') {
+  g.font = size + 'px VT323, monospace';
+  g.fillStyle = c;
+  g.textAlign = align;
+  g.fillText(s, x, y);
+}
+
+function drawPumpkin(x, label) {
+  const y = GROUND - 18;
+  block(x, y, 24, 18, '#ff8a1f');
+  block(x + 4, y, 4, 18, '#e0701a'); block(x + 16, y, 4, 18, '#e0701a');
+  block(x + 10, y - 6, 4, 6, '#3d6b2a');
+  block(x + 5, y + 5, 4, 4, '#2a1400'); block(x + 15, y + 5, 4, 4, '#2a1400');
+  block(x + 6, y + 12, 12, 2, '#2a1400');
+  txt(label, x + 12, y - 10, 14, '#ffb36b', 'center');
+}
+function drawGrave(x, label) {
+  const y = GROUND - 30;
+  block(x + 4, y, 20, 4, '#8f8a9e');
+  block(x, y + 4, 28, 26, '#8f8a9e');
+  block(x + 2, y + 26, 24, 4, '#6e6a7c');
+  txt('RIP', x + 14, y + 19, 14, '#3a3646', 'center');
+  txt(label, x + 14, y - 6, 14, '#c9c2dd', 'center');
+}
+
+function drawWorld() {
+  block(0, 0, W, H, '#2a1840');
+  txt('sky (spooky)', 14, 80, 18, '#4f3570');
+  block(470, 96, 36, 36, '#3a2556');
+  g.strokeStyle = '#6a5590'; g.lineWidth = 2; g.strokeRect(470, 96, 36, 36);
+  txt('✕', 488, 121, 22, '#a33', 'center');
+  txt('moon.png not found', 488, 150, 16, '#6a5590', 'center');
+  block(70, 112, 70, 20, '#3d2a58'); txt('fog', 105, 127, 16, '#6a5590', 'center');
+  const bx = 200 + Math.sin(t / 40) * 30, by = 104 + (Math.floor(t / 8) % 2) * 3;
+  block(bx, by, 6, 4, '#0c0c0e'); block(bx - 8, by - 3, 8, 4, '#0c0c0e'); block(bx + 6, by - 3, 8, 4, '#0c0c0e');
+  txt('bat (budget)', bx + 3, by + 16, 13, '#6a5590', 'center');
+  block(612, 0, 2, 200, '#cfc8e0');
+  block(608, 200, 10, 8, '#0c0c0e');
+  txt('spider', 613, 222, 13, '#cfc8e0', 'center');
+  txt('(fake)', 613, 234, 13, '#cfc8e0', 'center');
+
+  block(250, GROUND, 120, 60, '#140b1f');
+  txt('pit (do not)', 310, 334, 18, '#6a5590', 'center');
+  for (const s of SOLIDS) {
+    const lid = s.h < 20;
+    block(s.x, s.y, s.w, s.h, lid ? '#5a3a24' : '#3b2a2a');
+    if (!lid) block(s.x, s.y, s.w, 6, '#4f6b2a');
+    txt(s.label, s.x + s.w / 2, s.y + (lid ? -4 : 34), lid ? 14 : 20, lid ? '#c9a86a' : '#7a5a5a', 'center');
+  }
+  for (const d of DECOR) d.kind === 'pumpkin' ? drawPumpkin(d.x, d.label) : drawGrave(d.x, d.label);
+}
+
+function drawPlayer() {
+  const bob = p.ground && p.vx ? Math.floor(t / 6) % 2 * 2 : Math.floor(t / 20) % 2;
+  const x = p.x, y = p.y - bob;
+  block(x + 4, y, 16, 4, '#faf3e6');
+  block(x, y + 4, 24, 20, '#faf3e6');
+  const wv = Math.floor(t / 8) % 2 * 4;
+  for (let i = 0; i < 3; i++) block(x + i * 8 + (wv ? 4 : 0) - (i === 2 && wv ? 4 : 0), y + 24, 4, 4, '#faf3e6');
+  const ex = p.face > 0 ? 10 : 4;
+  block(x + ex, y + 8, 4, 6, '#0c0c0e');
+  block(x + ex + 6, y + 8, 4, 6, '#0c0c0e');
+  block(x - 2, y + 16, 28, 4, '#ff5a47');
+  block(p.face > 0 ? x - 8 : x + 24, y + 16 + (Math.floor(t / 10) % 2) * 2, 8, 4, '#ff5a47');
+  txt('you (a ghost?)', x + 12, y - 16, 15, '#faf3e6', 'center');
+  txt('↓', x + 12, y - 4, 15, '#faf3e6', 'center');
+}
+
+function drawFlag() {
+  const x = flag.x, y = GROUND;
+  block(x, y - 20, 24, 20, '#ff8a1f');
+  block(x + 2, y - 22, 20, 2, '#e0701a');
+  block(x + 5, y - 15, 4, 4, '#2a1400'); block(x + 15, y - 15, 4, 4, '#2a1400');
+  block(x + 6, y - 8, 12, 2, '#2a1400');
+  g.strokeStyle = '#2a1400'; g.lineWidth = 2;
+  g.beginPath(); g.arc(x + 12, y - 22, 11, Math.PI, 0); g.stroke();
+  block(x + 4, y - 26, 4, 4, '#ff5a47'); block(x + 14, y - 27, 4, 4, '#9a6bff');
+  if (flag.run) {
+    const leg = Math.floor(t / 3) % 2 * 4;
+    block(x + 2 + leg, y, 4, 6, '#0c0c0e');
+    block(x + 16 - leg, y, 4, 6, '#0c0c0e');
+    txt('NOPE', x + 12, y - 40, 18, '#ff5a47', 'center');
+  } else if (flag.tired) txt('😮‍💨 fine.', x + 6, y - 40, 16, '#faf3e6', 'center');
+  else txt('candy 🍬', x + 10, y - 40, 16, '#faf3e6', 'center');
+}
+
+function drawBoss() {
+  if (!boss) return;
+  if (!boss.dead) {
+    const x = boss.x, y = boss.y;
+    block(x - 6, y + 2, 28, 12, '#5a0f1c');
+    block(x, y, 16, 16, '#d9d2e6');
+    block(x + 3, y + 4, 3, 3, '#b0172a'); block(x + 10, y + 4, 3, 3, '#b0172a');
+    block(x + 4, y + 11, 2, 3, '#fff'); block(x + 10, y + 11, 2, 3, '#fff');
+    block(x, y - 3, 16, 3, '#0c0c0e');
+    txt('please don\'t', x + 8, y - 8, 14, '#faf3e6', 'center');
+  }
+  block(120, 64, 400, 18, '#0c0c0e');
+  block(124, 68, boss.dead ? 0 : 392, 10, '#b0172a');
+  txt('THE FINAL BOSS: a very small vampire · HP ' + (boss.dead ? 0 : 1) + '/1', 320, 58, 18, '#faf3e6', 'center');
+}
+
+function drawAd() {
+  if (!ad.on) return;
+  const big = ad.closed === 2;
+  block(ad.x, ad.y, ad.w, ad.h, '#ff8a1f');
+  g.strokeStyle = '#9a6bff'; g.lineWidth = 3; g.strokeRect(ad.x + 1, ad.y + 1, ad.w - 2, ad.h - 2);
+  txt(big ? '🧟 DOWNLOAD EVEN MORE BRAINS' : 'DOWNLOAD MORE BRAINS', ad.x + 10, ad.y + (big ? 34 : 24), big ? 26 : 20, '#2a0a3a');
+  txt('100% real. click nothing.', ad.x + 10, ad.y + (big ? 60 : 44), 15, '#4a1a00');
+  block(ad.x + ad.w - 24, ad.y + 2, 22, 20, '#0c0c0e');
+  txt('x', ad.x + ad.w - 13, ad.y + 17, 18, '#fff', 'center');
+}
+
+function drawHUD() {
+  const keysTxt = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].map(k => NAMES[k] + ' = ' + patch[k]).join('   ');
+  block(8, 6, 362, 46, 'rgba(12,12,14,.8)');
+  txt(keysTxt, 16, 24, 18, '#ff8a1f');
+  txt('score: ' + score + '   deaths: ' + deaths + '   fps: ' + (3 + (t >> 5) % 3), 16, 44, 18);
+  txt(patch.label, W - 10, H - 8, 14, '#6a5590', 'right');
+  toasts.slice(-2).forEach((o, i) => {
+    const y = 186 + i * 34;
+    g.font = '26px VT323, monospace';
+    const w = g.measureText(o.text).width + 24;
+    block(320 - w / 2, y - 22, w, 30, 'rgba(12,12,14,.85)');
+    txt(o.text, 320, y, 26, '#faf3e6', 'center');
+  });
+  if (freeze > 0) {
+    block(0, 0, W, H, 'rgba(255,90,71,.25)');
+    txt(frozenText, 320, 150, 40, '#faf3e6', 'center');
+  }
+}
+
+function render() {
+  g.save();
+  if (shake > 0) g.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+  drawWorld();
+  drawFlag();
+  drawBoss();
+  drawPlayer();
+  drawAd();
+  g.restore();
+  drawHUD();
+}
+
+let last = performance.now(), acc = 0;
+function loop(now) {
+  acc += Math.min(100, now - last);
+  last = now;
+  while (acc >= 1000 / 60) {
+    if (state === 'play') update();
+    acc -= 1000 / 60;
+  }
+  if (state === 'play' || state === 'end') render();
+  else block(0, 0, W, H, '#0c0c0e');
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+window.__game = { get state() { return state; }, get p() { return p; }, get flag() { return flag; }, get boss() { return boss; }, get escapes() { return escapes; } };
+</script>
+</body>
+</html>
